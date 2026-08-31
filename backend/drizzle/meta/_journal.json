@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1787826067382,
+      "tag": "0000_chemical_logan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1787826603962,
+      "tag": "0001_loving_proemial_gods",
+      "breakpoints": true
+    }
+  ]
+}
