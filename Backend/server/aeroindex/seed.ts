@@ -24,19 +24,71 @@ const carrierSeed = [
 
 export async function seedDevelopmentData() {
   const db = await requireDb();
-  for (const city of citySeed) await db.insert(cities).values(city).onDuplicateKeyUpdate({ set: city });
+  for (const city of citySeed) {
+    await db.insert(cities).values({
+      name: city.name,
+      state: city.state,
+      latitude: city.latitude,
+      longitude: city.longitude
+    }).onConflictDoUpdate({
+      target: [cities.name, cities.state],
+      set: { latitude: city.latitude, longitude: city.longitude }
+    });
+  }
+
   const cityRows = await db.select().from(cities).where(inArray(cities.name, citySeed.map(city => city.name)));
   const cityMap = new Map(cityRows.map(city => [city.name, city]));
   for (const airport of airportSeed) {
     const city = cityMap.get(airport.city)!;
-    await db.insert(airports).values({ iataCode: airport.iataCode, name: airport.name, cityId: city.id, state: airport.state, latitude: airport.latitude, longitude: airport.longitude }).onDuplicateKeyUpdate({ set: { name: airport.name, cityId: city.id, state: airport.state, latitude: airport.latitude, longitude: airport.longitude } });
+    await db.insert(airports).values({
+      iataCode: airport.iataCode,
+      name: airport.name,
+      cityId: city.id,
+      state: airport.state,
+      latitude: airport.latitude,
+      longitude: airport.longitude
+    }).onConflictDoUpdate({
+      target: airports.iataCode,
+      set: { name: airport.name, cityId: city.id, state: airport.state, latitude: airport.latitude, longitude: airport.longitude }
+    });
   }
-  for (const carrier of carrierSeed) await db.insert(carriers).values(carrier).onDuplicateKeyUpdate({ set: carrier });
-  await db.insert(dataSources).values({ slug: "aeroindex-verified-import", displayName: "AeroIndex Verified Import", kind: "manual", reliabilityScore: 92, isActive: true }).onDuplicateKeyUpdate({ set: { displayName: "AeroIndex Verified Import", reliabilityScore: 92, isActive: true } });
+
+  for (const carrier of carrierSeed) {
+    await db.insert(carriers).values({
+      name: carrier.name,
+      iataCode: carrier.iataCode,
+      icaoCode: carrier.icaoCode
+    }).onConflictDoUpdate({
+      target: carriers.iataCode,
+      set: { name: carrier.name, icaoCode: carrier.icaoCode }
+    });
+  }
+
+  await db.insert(dataSources).values({
+    slug: "aeroindex-verified-import",
+    displayName: "AeroIndex Verified Import",
+    kind: "manual",
+    reliabilityScore: 92,
+    isActive: true
+  }).onConflictDoUpdate({
+    target: dataSources.slug,
+    set: { displayName: "AeroIndex Verified Import", reliabilityScore: 92, isActive: true }
+  });
+
   const airportRows = await db.select().from(airports).where(inArray(airports.iataCode, airportSeed.map(airport => airport.iataCode)));
   const airportMap = new Map(airportRows.map(airport => [airport.iataCode, airport]));
   const routeSeed = [["AMD", "BOM", 441], ["DEL", "BLR", 1740], ["BOM", "DEL", 1148]] as const;
-  for (const [origin, destination, distanceKm] of routeSeed) await db.insert(routes).values({ originAirportId: airportMap.get(origin)!.id, destinationAirportId: airportMap.get(destination)!.id, distanceKm }).onDuplicateKeyUpdate({ set: { distanceKm, isActive: true } });
+  for (const [origin, destination, distanceKm] of routeSeed) {
+    await db.insert(routes).values({
+      originAirportId: airportMap.get(origin)!.id,
+      destinationAirportId: airportMap.get(destination)!.id,
+      distanceKm
+    }).onConflictDoUpdate({
+      target: [routes.originAirportId, routes.destinationAirportId],
+      set: { distanceKm, isActive: true }
+    });
+  }
+
   const routeRows = await db.select().from(routes);
   const routeMap = new Map(routeRows.map(route => [`${airportRows.find(airport => airport.id === route.originAirportId)?.iataCode}-${airportRows.find(airport => airport.id === route.destinationAirportId)?.iataCode}`, route]));
   const carrierRows = await db.select().from(carriers).where(inArray(carriers.iataCode, carrierSeed.map(carrier => carrier.iataCode)));

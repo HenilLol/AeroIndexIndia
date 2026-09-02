@@ -1,13 +1,19 @@
 import type { RouteRecord, Severity } from "@/data/mockData";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").trim();
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 
 type TrpcEnvelope<T> = { result?: { data?: { json?: T } } };
 
 async function trpcQuery<T>(procedure: string, input?: unknown): Promise<T> {
-  const url = new URL(`${API_BASE_URL}/api/trpc/${procedure}`);
+  const cleanProcedure = procedure.replace(/^\/+/, "");
+  const targetPath = cleanProcedure.startsWith("api/trpc/") ? cleanProcedure : `api/trpc/${cleanProcedure}`;
+  const fullUrlString = API_BASE_URL ? `${API_BASE_URL}/${targetPath}` : `/${targetPath}`;
+  const baseUrlForUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const url = new URL(fullUrlString, baseUrlForUrl);
+
   if (input !== undefined) url.searchParams.set("input", JSON.stringify({ json: input }));
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const response = await fetch(url.toString(), { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`AeroIndex API request failed (${response.status})`);
   const payload = (await response.json()) as TrpcEnvelope<T>;
   const value = payload.result?.data?.json;
