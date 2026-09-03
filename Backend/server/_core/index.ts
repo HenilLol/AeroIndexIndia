@@ -9,6 +9,12 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
 async function startServer() {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction && !process.env.JWT_SECRET) {
+    throw new Error("FATAL: JWT_SECRET environment variable must be configured in production mode.");
+  }
+
   const app = express();
   const server = createServer(app);
 
@@ -17,16 +23,28 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "";
-  const allowedOrigins = rawOrigins.split(",").map(s => s.trim()).filter(Boolean);
+  const configuredOrigins = rawOrigins.split(",").map(s => s.trim()).filter(Boolean);
+  const devOriginRegex = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin) || allowedOrigins.includes("*"))) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Vary", "Origin");
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-trpc-source");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+    if (origin) {
+      let isAllowed = false;
+      if (configuredOrigins.includes("*")) {
+        isAllowed = true;
+      } else if (configuredOrigins.length > 0) {
+        isAllowed = configuredOrigins.includes(origin);
+      } else if (!isProduction) {
+        isAllowed = devOriginRegex.test(origin);
+      }
+
+      if (isAllowed) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Vary", "Origin");
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-trpc-source");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+      }
     }
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();

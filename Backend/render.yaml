@@ -3,8 +3,8 @@ services:
     name: aeroindex-india-backend
     env: node
     rootDir: Backend
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

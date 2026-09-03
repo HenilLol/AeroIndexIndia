@@ -5,7 +5,7 @@ import { seedDevelopmentData } from "./seed";
 
 const systemActor = { id: 0, openId: "test-system", name: "Test system", email: null, loginMethod: "system", role: "admin" as const, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
 
-describe("AeroIndex database integration", () => {
+describe.skipIf(!process.env.DATABASE_URL)("AeroIndex database integration", () => {
   beforeAll(async () => {
     await seedDevelopmentData();
   }, 60_000);
