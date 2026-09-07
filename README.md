@@ -6,6 +6,9 @@ The repository keeps the two application surfaces deliberately separated. The br
 
 > **Prototype boundary:** The project is designed as a governed demonstration and development foundation. Provider credentials, live airfare collection, official CPI publication, production authentication, and external operational actions must be configured and approved separately before deployment.
 
+> 📘 **SIH 2026 Technical & Pitch Guide:** For an exhaustive 39-point deep-dive into the web scraping pipeline, validation quality gates (V-1 to V-5), CPI compatibility scoring, Jevons & Törnqvist statistical index formulas, Isolation Forest anomaly detection, database schema, end-to-end trace, and 30-second presentation pitch, see [**TECHNICAL_ARCHITECTURE_AND_PITCH_GUIDE.md**](TECHNICAL_ARCHITECTURE_AND_PITCH_GUIDE.md).
+
+
 ## Repository layout
 
 | Directory | Responsibility |
@@ -32,6 +35,54 @@ The backend exposes typed procedures for public market-intelligence views, authe
 The project uses TypeScript across both application surfaces. The frontend is a React application built with Vite and Tailwind CSS, with Wouter for client-side navigation and reusable UI primitives under `Frontend/client/src/components/ui/`. The backend uses a Vite-compatible server bundle, tRPC for typed procedures, Drizzle ORM for database access and migrations, and Vitest for automated tests.
 
 The frontend can run independently with deterministic local demonstration data. The backend provides the server-side domain and integration boundary required for a governed deployment. Live provider adapters are intentionally inactive by default and must never expose credentials in the browser bundle.
+
+## System Architecture & Technical Pipeline (SIH 2026)
+
+AeroIndex India is architected for the **Smart India Hackathon 2026** ([PS-SIH26056: Automated Airfare Data Collection, Validation, and Index Calculation](https://sih2026.vuce.in/ps/SIH26056?utm_source=chatgpt.com)).
+
+```text
+Airline & OTA Portals (IndiGo, Air India, etc.)
+       │
+       ▼  Playwright Browser Automation
+Raw Fare Data (DEL-BOM, ₹6,250, T-13 days, Cabin, Carrier)
+       │
+       ▼  Pydantic + Quality Gates (V-1 to V-5)
+Validation & Normalization (DEL, BOM, Positive Fares, Non-duplicates)
+       │
+       ▼  Algorithm (Route, Window, Passenger & Source Quality)
+CPI Compatibility Scoring (e.g. 96/100 Usable vs 61/100 Quarantine)
+       │
+       ▼  Range Partitioning
+PostgreSQL Data Warehouse (fact_flight_fares_YYYY_MM)
+       │
+       ├──────────────────────────────────┐
+       ▼                                  ▼
+Route-Level Jevons Index            Isolation Forest ML
+(Matched Geometric Mean)            (Anomaly Detection Engine)
+       │                                  │
+       ▼                                  ▼
+National Törnqvist Index            Analyst Anomaly Feed
+(Passenger Weighted Aggregation)    (Quarantine / Evidence Review)
+       │                                  │
+       └──────────────────┬───────────────┘
+                          ▼
+            FastAPI / tRPC Backend Gateway
+                          ▼
+            Next.js / React Analyst Signal Desk
+```
+
+### Core Architecture Highlights
+- **Collection**: Playwright programmatically executes search sequences across booking windows (30d, 15d, 7d, 1d).
+- **Validation Quality Gates (V-1 to V-5)**: Required fields, boundary checks, chronological date consistency, and cryptographic deduplication.
+- **CPI Compatibility Score (⭐)**: Measures observation purity for official statistical index compliance.
+- **Statistical Mathematics**:
+  - **Jevons Index**: Unweighted geometric mean of price relatives at the elementary route level.
+  - **Törnqvist Index**: Superlative weighted geometric index incorporating corridor passenger shares for national aggregation.
+- **Isolation Forest**: Unsupervised ML isolating price spikes and scraping anomalies without distorting statistical baselines.
+- **Traceability & Lineage**: Full backwards audit trail from national index values down to raw scraping timestamps.
+
+👉 *See [**TECHNICAL_ARCHITECTURE_AND_PITCH_GUIDE.md**](TECHNICAL_ARCHITECTURE_AND_PITCH_GUIDE.md) for the complete 39-point deep dive, mathematical formulas, and presentation pitch.*
+
 
 ## Prerequisites
 
